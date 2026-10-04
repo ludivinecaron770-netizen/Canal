@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,64 +7,44 @@
     <title>Niveau Canal</title>
 
     <style>
-
         body {
             margin: 0;
             min-height: 100vh;
-
             display: flex;
             justify-content: center;
             align-items: center;
-
             background: #eef6f8;
-
             font-family: Arial, sans-serif;
         }
 
         .carte {
-
             background: white;
-
             padding: 40px 50px;
-
             border-radius: 18px;
-
-            box-shadow:
-                0 5px 25px rgba(0,0,0,.15);
-
+            box-shadow: 0 5px 25px rgba(0,0,0,.15);
             text-align: center;
         }
 
         h1 {
-
             color: #164b6b;
-
             margin-bottom: 25px;
         }
 
-        #niveau {
-
-            font-size: 22px;
-
-            color: #333;
-        }
-
         .valeur {
-
             font-size: 45px;
-
             font-weight: bold;
-
             color: #008b9a;
         }
 
-        .erreur {
-
-            color: #c62828;
+        .date {
+            font-size: 20px;
+            color: #555;
         }
 
+        .erreur {
+            color: #c62828;
+        }
     </style>
-
 </head>
 
 <body>
@@ -80,159 +59,44 @@
 
 </div>
 
-
 <script>
 
-async function afficherNiveau() {
-
-    /*
-     * Date de référence :
-     * on utilise maintenant.
-     */
-
-    const dateReference =
-        new Date().toISOString();
-
-
-    const url =
-        "https://www.vnf.fr/aghyre/api/rsi-data/data" +
-        "?dateReference=" +
-        encodeURIComponent(dateReference) +
-        "&limit=20" +
-        "&pas=86400" +
-        "&pks=id:::L16956" +
-        "&rubricMasc=true";
-
+async function chargerNiveau() {
 
     try {
 
-        const response = await fetch(url, {
-
-            method: "GET",
-
-            headers: {
-                "Accept": "application/json"
-            }
-
-        });
-
+        const response = await fetch(
+            "niveau.json?" + Date.now()
+        );
 
         if (!response.ok) {
-
-            throw new Error(
-                "Erreur HTTP : " +
-                response.status
-            );
-
+            throw new Error("HTTP " + response.status);
         }
 
+        const data = await response.json();
 
-        const data =
-            await response.json();
+        document.getElementById("niveau").innerHTML =
+            "<div class='date'>" +
+            data.date +
+            "</div>" +
+            "<div class='valeur'>" +
+            data.niveau.toFixed(2) +
+            " m</div>";
 
+    } catch (error) {
 
-        console.log("Réponse VNF :", data);
+        console.error(error);
 
-
-        /*
-         * Premier relevé
-         */
-
-        const dernierReleve =
-            data.values[0];
-
-
-        /*
-         * Deuxième valeur
-         *
-         * [0] = -0.12082
-         * [1] = 1.42  <-- niveau
-         * [2] = 0
-         */
-
-        const niveau =
-            dernierReleve.values[1].value;
-
-
-        /*
-         * Date du relevé
-         */
-
-        const date =
-            new Date(
-                dernierReleve.date
-            );
-
-
-        const dateFormatee =
-            date.toLocaleDateString(
-                "fr-FR",
-                {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric"
-                }
-            );
-
-
-        const heure =
-            date.toLocaleTimeString(
-                "fr-FR",
-                {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                }
-            );
-
-
-        /*
-         * Affichage
-         */
-
-        document.getElementById(
-            "niveau"
-        ).innerHTML =
-
-            "le " +
-            dateFormatee +
-            " à " +
-            heure +
-            " : " +
-
-            "<span class='valeur'>" +
-            niveau.toFixed(2) +
-            " m" +
-            "</span>";
-
-
-    } catch (erreur) {
-
-        console.error(erreur);
-
-
-        document.getElementById(
-            "niveau"
-        ).innerHTML =
-
+        document.getElementById("niveau").innerHTML =
             "<span class='erreur'>" +
-
             "Impossible de récupérer le niveau" +
-
             "</span>";
-
     }
-
 }
 
-
-/*
- * Lancement
- */
-
-afficherNiveau();
+chargerNiveau();
 
 </script>
 
 </body>
-
 </html>
