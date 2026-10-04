@@ -1,0 +1,11 @@
+{
+  "name": "niveau-canal",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "update": "node update-niveau.js"
+  },
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}
