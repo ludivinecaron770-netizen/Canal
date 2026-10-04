@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Niveau Canal</title>
 
     <style>
@@ -19,12 +18,10 @@
 
         .carte {
             background: white;
-            padding: 35px;
+            padding: 40px;
             border-radius: 15px;
             box-shadow: 0 5px 20px rgba(0,0,0,.15);
             text-align: center;
-            max-width: 600px;
-            width: 90%;
         }
 
         h1 {
@@ -33,28 +30,12 @@
 
         #niveau {
             font-size: 22px;
-            margin-top: 25px;
         }
 
         .valeur {
-            font-size: 42px;
+            font-size: 45px;
             font-weight: bold;
             color: #087f8c;
-        }
-
-        #debug {
-            margin-top: 30px;
-            padding: 15px;
-            background: #f4f4f4;
-            text-align: left;
-            font-size: 12px;
-            overflow: auto;
-            max-height: 300px;
-            white-space: pre-wrap;
-        }
-
-        .erreur {
-            color: red;
         }
     </style>
 </head>
@@ -62,17 +43,8 @@
 <body>
 
 <div class="carte">
-
     <h1>Niveau Canal</h1>
-
-    <div id="niveau">
-        Chargement...
-    </div>
-
-    <div id="debug">
-        Récupération des données...
-    </div>
-
+    <div id="niveau">Chargement...</div>
 </div>
 
 <script>
@@ -89,99 +61,33 @@ async function afficherNiveau() {
 
     try {
 
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+                "Accept": "application/json"
+            }
+        });
 
         if (!response.ok) {
-            throw new Error("Erreur HTTP : " + response.status);
+            throw new Error("HTTP " + response.status);
         }
 
         const data = await response.json();
 
-        console.log("REPONSE VNF :", data);
-
-        // Affiche la réponse complète pour diagnostic
-        document.getElementById("debug").textContent =
-            JSON.stringify(data, null, 2);
-
-        /*
-         * On cherche automatiquement le nombre 1.42
-         * dans la structure retournée.
-         */
-
-        let niveau = null;
-        let dateReleve = null;
-
-        function chercher(obj) {
-
-            if (niveau !== null) return;
-
-            if (Array.isArray(obj)) {
-
-                // Recherche d'un tableau du type :
-                // [date, valeur1, niveau, valeur3]
-
-                if (obj.length >= 3) {
-
-                    for (let i = 0; i < obj.length; i++) {
-
-                        if (
-                            typeof obj[i] === "number" &&
-                            obj[i] > -100 &&
-                            obj[i] < 100
-                        ) {
-
-                            // On privilégie la 2e valeur numérique
-                            if (i === 2) {
-                                niveau = obj[i];
-
-                                if (typeof obj[0] === "string") {
-                                    dateReleve = obj[0];
-                                }
-
-                                return;
-                            }
-                        }
-                    }
-                }
-
-                for (const element of obj) {
-                    chercher(element);
-                }
-
-            } else if (obj && typeof obj === "object") {
-
-                for (const cle in obj) {
-                    chercher(obj[cle]);
-                }
-            }
-        }
-
-        chercher(data);
-
-        if (niveau === null) {
-            throw new Error(
-                "Impossible de trouver le niveau dans la réponse VNF."
-            );
-        }
+        console.log("Données VNF :", data);
 
         document.getElementById("niveau").innerHTML =
-            "Niveau Canal" +
-            (dateReleve ? " le " + dateReleve : "") +
-            " : <span class=\"valeur\">" +
-            niveau +
-            " m</span>";
+            JSON.stringify(data);
 
-    } catch (erreur) {
+    } catch (error) {
 
-        console.error(erreur);
+        console.error(error);
 
         document.getElementById("niveau").innerHTML =
-            '<span class="erreur">' +
-            "Impossible de récupérer le niveau." +
-            "</span>";
-
-        document.getElementById("debug").textContent =
-            "ERREUR :\n\n" + erreur;
+            `<span style="color:red">
+                ${error.message}
+            </span>`;
     }
 }
 
