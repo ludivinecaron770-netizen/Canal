@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Niveau Canal</title>
 
     <style>
@@ -12,20 +13,21 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #eef5f8;
+            background: #eef6f8;
             font-family: Arial, sans-serif;
         }
 
         .carte {
             background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,.15);
+            padding: 35px 50px;
+            border-radius: 18px;
+            box-shadow: 0 5px 25px rgba(0,0,0,.15);
             text-align: center;
         }
 
         h1 {
             color: #164b6b;
+            margin: 0 0 20px;
         }
 
         #niveau {
@@ -33,9 +35,13 @@
         }
 
         .valeur {
-            font-size: 45px;
+            font-size: 42px;
             font-weight: bold;
-            color: #087f8c;
+            color: #008b9a;
+        }
+
+        .erreur {
+            color: #c62828;
         }
     </style>
 </head>
@@ -43,31 +49,24 @@
 <body>
 
 <div class="carte">
+
     <h1>Niveau Canal</h1>
-    <div id="niveau">Chargement...</div>
+
+    <div id="niveau">
+        Chargement...
+    </div>
+
 </div>
 
 <script>
 
 async function afficherNiveau() {
 
-    const url =
-        "https://www.vnf.fr/aghyre/api/rsi-data/data" +
-        "?dateReference=2026-10-04T09:49:00.000Z" +
-        "&limit=30" +
-        "&pas=86400" +
-        "&pks=id:::L16956" +
-        "&rubricMasc=true";
-
     try {
 
-        const response = await fetch(url, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-                "Accept": "application/json"
-            }
-        });
+        const response = await fetch(
+            "https://TON-WORKER.workers.dev"
+        );
 
         if (!response.ok) {
             throw new Error("HTTP " + response.status);
@@ -75,19 +74,20 @@ async function afficherNiveau() {
 
         const data = await response.json();
 
-        console.log("Données VNF :", data);
-
         document.getElementById("niveau").innerHTML =
-            JSON.stringify(data);
+            "le " + data.date +
+            " : <span class='valeur'>" +
+            data.niveau +
+            " m</span>";
 
     } catch (error) {
 
         console.error(error);
 
         document.getElementById("niveau").innerHTML =
-            `<span style="color:red">
-                ${error.message}
-            </span>`;
+            "<span class='erreur'>" +
+            "Impossible de récupérer le niveau" +
+            "</span>";
     }
 }
 
