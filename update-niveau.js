@@ -4,8 +4,13 @@ const fs = require("fs");
 const PAGE_URL =
     "https://www.vnf.fr/aghyre/#!/rsi-site/tab-rru-non-masquee/id:::L16956?c=0";
 
-const API_PART =
-    "/api/rsi-data/data";
+const API_URL =
+    "https://www.vnf.fr/aghyre/api/rsi-data/data" +
+    "?dateReference=" + encodeURIComponent(new Date().toISOString()) +
+    "&limit=20" +
+    "&pas=86400" +
+    "&pks=id:::L16956" +
+    "&rubricMasc=true";
 
 async function main() {
 
@@ -15,33 +20,37 @@ async function main() {
         headless: true
     });
 
-    const page = await browser.newPage();
+    const context = await browser.newContext();
+
+    const page = await context.newPage();
+
+    let bearer = null;
+
+    /*
+     * On surveille toutes les requêtes du navigateur.
+     * Dès qu'une requête a un Authorization Bearer,
+     * on récupère le token.
+     */
+
+    page.on("request", request => {
+
+        const authorization =
+            request.headers()["authorization"];
+
+        if (
+            authorization &&
+            authorization.startsWith("Bearer ")
+        ) {
+
+            bearer = authorization.substring(7);
+
+            console.log(
+                "Token anonyme VNF détecté."
+            );
+        }
+    });
 
     try {
-
-        /*
-         * On attend la requête API L16956.
-         * Playwright laisse le navigateur aGHyre
-         * récupérer lui-même son authentification.
-         */
-
-        const responsePromise = page.waitForResponse(
-            response => {
-
-                const url = response.url();
-
-                return (
-                    url.includes(API_PART) &&
-                    url.includes("pks=id:::L16956")
-                );
-
-            },
-            {
-                timeout: 60000
-            }
-        );
-
-        console.log("Chargement de la page...");
 
         await page.goto(PAGE_URL, {
             waitUntil: "domcontentloaded",
@@ -51,31 +60,68 @@ async function main() {
         console.log("Page chargée.");
 
         /*
-         * Attente de la réponse API
+         * Laisse aGHyre initialiser son authentification.
          */
 
-        const response = await responsePromise;
+        await page.waitForTimeout(15000);
+
+        if (!bearer) {
+
+            throw new Error(
+                "Impossible de récupérer le token anonyme VNF."
+            );
+        }
 
         console.log(
-            "Réponse VNF trouvée :",
-            response.url()
+            "Appel direct de l'API VNF..."
         );
 
-        if (!response.ok()) {
+        /*
+         * On utilise le même navigateur pour faire
+         * l'appel API avec le Bearer récupéré.
+         */
+
+        const result = await page.evaluate(
+            async ({ apiUrl, token }) => {
+
+                const response = await fetch(
+                    apiUrl,
+                    {
+                        headers: {
+                            "Accept":
+                                "application/json",
+
+                            "Authorization":
+                                "Bearer " + token
+                        }
+                    }
+                );
+
+                return {
+                    status: response.status,
+                    data: await response.json()
+                };
+            },
+            {
+                apiUrl: API_URL,
+                token: bearer
+            }
+        );
+
+        console.log(
+            "HTTP API :",
+            result.status
+        );
+
+        if (result.status !== 200) {
 
             throw new Error(
                 "API VNF HTTP " +
-                response.status()
+                result.status
             );
-
         }
 
-        const data = await response.json();
-
-        console.log(
-            "Nombre de relevés :",
-            data.values?.length
-        );
+        const data = result.data;
 
         if (
             !data.values ||
@@ -83,17 +129,9 @@ async function main() {
         ) {
 
             throw new Error(
-                "La réponse VNF ne contient aucun relevé."
+                "Aucun relevé trouvé."
             );
-
         }
-
-        /*
-         * Le premier élément est le relevé le plus récent.
-         *
-         * values[0] = première rubrique
-         * values[1] = niveau
-         */
 
         const releve = data.values[0];
 
@@ -103,9 +141,8 @@ async function main() {
         ) {
 
             throw new Error(
-                "Structure inattendue des données VNF."
+                "Structure des données inattendue."
             );
-
         }
 
         const niveau =
@@ -124,10 +161,6 @@ async function main() {
             niveau
         );
 
-        /*
-         * Création de niveau.json
-         */
-
         const resultat = {
 
             date: date.toLocaleString(
@@ -143,7 +176,6 @@ async function main() {
             ),
 
             niveau: Number(niveau)
-
         };
 
         fs.writeFileSync(
@@ -156,14 +188,12 @@ async function main() {
         );
 
         console.log(
-            "niveau.json créé :",
-            resultat
+            "niveau.json mis à jour."
         );
 
     } finally {
 
         await browser.close();
-
     }
 }
 
