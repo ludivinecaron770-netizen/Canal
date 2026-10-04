@@ -1,0 +1,50 @@
+name: Mise à jour niveau canal
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "*/15 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+
+  update:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Récupération du dépôt
+        uses: actions/checkout@v4
+
+      - name: Installation Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Installation des dépendances
+        run: npm install
+
+      - name: Installation de Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Récupération du niveau VNF
+        run: npm run update
+
+      - name: Enregistrement du niveau
+        run: |
+
+          git config user.name "github-actions"
+
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add niveau.json
+
+          git diff --cached --quiet || \
+            git commit -m "Mise à jour niveau canal"
+
+          git push
